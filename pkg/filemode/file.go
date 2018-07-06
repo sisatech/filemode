@@ -2,6 +2,8 @@ package filemode
 
 import (
 	"os"
+	"path/filepath"
+	"strings"
 )
 
 // Create creates a new file at 'path' and sets permissions defined
@@ -34,8 +36,44 @@ func Mkdir(path string, mode os.FileMode) error {
 	// Go1.10 seems to disregard the 'mode' argument...
 	err = os.Chmod(path, mode)
 	if err != nil {
-		os.Remove(path)
+		// os.Remove(path)
 		return err
+	}
+
+	return nil
+}
+
+// MkdirAll creates all missing directories in a provided paths, and chmods them.
+func MkdirAll(path string, mode os.FileMode) error {
+
+	abs, err := filepath.Abs(path)
+	if err != nil {
+		return err
+	}
+
+	abs = filepath.ToSlash(abs)
+	elements := strings.Split(abs, "/")
+
+	cumulativePath := "/"
+
+	for _, e := range elements {
+
+		cumulativePath = filepath.Join(cumulativePath, e)
+
+		if cumulativePath != "" {
+			if _, err := os.Stat(cumulativePath); os.IsNotExist(err) {
+				err := Mkdir(cumulativePath, mode)
+				if err != nil {
+					return err
+				}
+
+				err = os.Chmod(cumulativePath, mode)
+				if err != nil {
+					return err
+				}
+			}
+		}
+
 	}
 
 	return nil
